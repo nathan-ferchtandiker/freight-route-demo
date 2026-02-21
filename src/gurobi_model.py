@@ -216,6 +216,13 @@ def solve_vrp_group(
     # C10: symmetry breaking — use lower-indexed trucks first
     for idx in range(len(K) - 1):
         m.addConstr(z[K[idx]] >= z[K[idx + 1]], f"sym_{idx}")
+    
+    # C11: lexicographic ordering of truck loads
+    for idx in range(len(K) - 1):
+        m.addConstr(
+            gp.quicksum(y[i, K[idx]] for i in stops) >= gp.quicksum(y[i, K[idx + 1]] for i in stops),
+            f"load_order_{idx}"
+        )
 
     # ---- Solve ----------------------------------------------------
     m.optimize()
