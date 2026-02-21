@@ -144,6 +144,20 @@ def solve_vrp_group(
         [(i, k) for i in nodes for k in K], lb=0, ub=n, vtype=GRB.CONTINUOUS, name="u"
     )
 
+    # Set branching priorities: structural decisions first
+    # Truck activation (highest priority, graduated by truck index)
+    for k in K:
+        z[k].BranchPriority = 15 - k  # z[1]=14, z[2]=13, etc.
+    
+    # Order assignments (medium priority)  
+    for i in stops:
+        for k in K:
+            y[i, k].BranchPriority = 5
+    
+    # Arc routing decisions (lowest priority)
+    for (i, j, k) in arc_keys:
+        x[i, j, k].BranchPriority = 1
+
     # ---- Objective ------------------------------------------------
     # One-way delivery cost only (return arcs to node 0 have zero cost).
     obj = _BIG_M * gp.quicksum(z[k] for k in K) + gp.quicksum(
@@ -155,6 +169,9 @@ def solve_vrp_group(
     # C1: every order served exactly once
     for i in stops:
         m.addConstr(gp.quicksum(y[i, k] for k in K) == 1, f"serve_{i}")
+
+    # Symmetry breaking: assign first order to first truck
+    m.addConstr(y[1, 1] == 1, "sym_break_first_order")
 
     for k in K:
         # C2: truck departs depot iff activated
@@ -199,6 +216,13 @@ def solve_vrp_group(
     # C10: symmetry breaking — use lower-indexed trucks first
     for idx in range(len(K) - 1):
         m.addConstr(z[K[idx]] >= z[K[idx + 1]], f"sym_{idx}")
+    
+    # C11: lexicographic ordering of truck loads
+    for idx in range(len(K) - 1):
+        m.addConstr(
+            gp.quicksum(y[i, K[idx]] for i in stops) >= gp.quicksum(y[i, K[idx + 1]] for i in stops),
+            f"load_order_{idx}"
+        )
 
     # ---- Solve ----------------------------------------------------
     m.optimize()
