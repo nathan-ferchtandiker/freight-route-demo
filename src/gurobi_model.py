@@ -208,6 +208,23 @@ def solve_vrp_group(
     for idx in range(len(K) - 1):
         m.addConstr(z[K[idx]] >= z[K[idx + 1]], f"sym_{idx}")
 
+    # Valid inequalities: weight-based cover cuts
+    # For subsets of orders exceeding truck capacity, at most |S|-1 can be on same truck
+    for k in K:
+        # Generate cover inequalities for pairs/triples that exceed capacity
+        for i in range(len(stops)):
+            for j in range(i + 1, len(stops)):
+                if weights[stops[i]] + weights[stops[j]] > TL_MAX_LBS:
+                    m.addConstr(y[stops[i], k] + y[stops[j], k] <= 1, 
+                               f"weight_cover_{stops[i]}_{stops[j]}_{k}")
+        # Three-order covers
+        for i in range(len(stops)):
+            for j in range(i + 1, len(stops)):
+                for l in range(j + 1, len(stops)):
+                    if weights[stops[i]] + weights[stops[j]] + weights[stops[l]] > TL_MAX_LBS:
+                        m.addConstr(y[stops[i], k] + y[stops[j], k] + y[stops[l], k] <= 2,
+                                   f"weight_cover3_{stops[i]}_{stops[j]}_{stops[l]}_{k}")
+
     # ---- Solve ----------------------------------------------------
     m.optimize()
 
