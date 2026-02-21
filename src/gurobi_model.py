@@ -201,8 +201,6 @@ def solve_vrp_group(
             m.addConstr(
                 gp.quicksum(x[i, j, k] for j in nodes if j != i) == y[i, k],
                 f"depart_{i}_{k}",
-    # Gurobi params (auto-tuned by GurobiAgent)
-    m.setParam("Cuts", 2)
             )
 
     # C8: MTZ subtour elimination (delivery stops only)
