@@ -144,6 +144,10 @@ def solve_vrp_group(
         [(i, k) for i in nodes for k in K], lb=0, ub=n, vtype=GRB.CONTINUOUS, name="u"
     )
 
+    # Set branching priorities: truck activation decisions are most important
+    for k in K:
+        z[k].BranchPriority = 10
+
     # ---- Objective ------------------------------------------------
     # One-way delivery cost only (return arcs to node 0 have zero cost).
     obj = _BIG_M * gp.quicksum(z[k] for k in K) + gp.quicksum(
