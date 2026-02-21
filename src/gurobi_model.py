@@ -168,6 +168,9 @@ def solve_vrp_group(
             gp.quicksum(weights[i] * y[i, k] for i in stops) <= TL_MAX_LBS,
             f"weight_{k}",
         )
+        # Only deliver on active trucks
+        for i in stops:
+            m.addConstr(y[i, k] <= z[k], f"active_truck_{i}_{k}")
         # C9: depot position anchor (MTZ)
         m.addConstr(u[0, k] == 0, f"depot_pos_{k}")
 
