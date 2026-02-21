@@ -147,11 +147,6 @@ def solve_vrp_group(
     # Set branching priorities: truck activation decisions are most important
     for k in K:
         z[k].BranchPriority = 10
-    
-    # Order assignment decisions are second most important
-    for i in stops:
-        for k in K:
-            y[i, k].BranchPriority = 8
 
     # ---- Objective ------------------------------------------------
     # One-way delivery cost only (return arcs to node 0 have zero cost).
