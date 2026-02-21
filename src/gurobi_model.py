@@ -207,11 +207,6 @@ def solve_vrp_group(
     # C10: symmetry breaking — use lower-indexed trucks first
     for idx in range(len(K) - 1):
         m.addConstr(z[K[idx]] >= z[K[idx + 1]], f"sym_{idx}")
-        # Strengthen: truck k should have >= stops than truck k+1
-        m.addConstr(
-            gp.quicksum(y[i, K[idx]] for i in stops) >= gp.quicksum(y[i, K[idx + 1]] for i in stops),
-            f"sym_stops_{idx}"
-        )
 
     # ---- Solve ----------------------------------------------------
     m.optimize()
