@@ -207,6 +207,14 @@ def solve_vrp_group(
     # C10: symmetry breaking — use lower-indexed trucks first
     for idx in range(len(K) - 1):
         m.addConstr(z[K[idx]] >= z[K[idx + 1]], f"sym_{idx}")
+    
+    # Additional lexicographic ordering: truck k should carry at least as much weight as truck k+1
+    for idx in range(len(K) - 1):
+        m.addConstr(
+            gp.quicksum(weights[i] * y[i, K[idx]] for i in stops) >= 
+            gp.quicksum(weights[i] * y[i, K[idx + 1]] for i in stops),
+            f"sym_load_{idx}"
+        )
 
     # Valid inequalities: weight-based cover cuts
     # For subsets of orders exceeding truck capacity, at most |S|-1 can be on same truck
