@@ -33,8 +33,8 @@ The VRP model is formulated as a Mixed Integer Program (MIP) with the following 
 - $k$: Trucks ($k \in \{1, \ldots, K_{\max}\}$)
 
 ### Parameters
-- $\text{MAX\_STOPS}$: Maximum stops per truck
-- $\text{TL\_MAX\_LBS}$: Maximum load per truck
+- $\mathrm{MAX\,STOPS}$: Maximum stops per truck
+- $\mathrm{TL\,MAX\,LBS}$: Maximum load per truck
 - $w_i$: Weight of order $i$
 - $d_{ij}$: Distance from node $i$ to node $j$
 
@@ -47,7 +47,7 @@ The VRP model is formulated as a Mixed Integer Program (MIP) with the following 
 ### Objective
 Minimize:
 $$
-\text{BIG\_M} \cdot \sum_k z_k + \sum_{i,j,k} d_{ij} \cdot x_{i,j,k}
+\mathrm{BIG\,M} \cdot \sum_k z_k + \sum_{i,j,k} d_{ij} \cdot x_{i,j,k}
 $$
 
 ### Constraints
@@ -65,11 +65,11 @@ $$
 $$
 4. **Stop limit:**
 $$
-\sum_i y_{i,k} \leq \text{MAX\_STOPS} \quad \forall k
+\sum_i y_{i,k} \leq \mathrm{MAX\,STOPS} \quad \forall k
 $$
 5. **Weight limit:**
 $$
-\sum_i w_i y_{i,k} \leq \text{TL\_MAX\_LBS} \quad \forall k
+\sum_i w_i y_{i,k} \leq \mathrm{TL\,MAX\,LBS} \quad \forall k
 $$
 6. **Only deliver on active trucks:**
 $$
