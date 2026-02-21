@@ -197,6 +197,16 @@ def solve_vrp_group(
                         f"mtz_{i}_{j}_{k}",
                     )
 
+    # Order position symmetry breaking: for orders with identical weights,
+    # enforce lexicographic ordering in MTZ positions within each truck
+    for i in stops:
+        for j in stops:
+            if i < j and abs(weights[i] - weights[j]) < 1e-6:  # same weight
+                for k in K:
+                    # If both orders assigned to truck k, order i must precede order j
+                    m.addConstr(u[i, k] - u[j, k] <= n * (2 - y[i, k] - y[j, k]),
+                               f"pos_sym_{i}_{j}_{k}")
+
     # Logical constraints: order can only be assigned to active truck
     # Gurobi params (auto-tuned by GurobiAgent)
     m.setParam("Symmetry", 2)
