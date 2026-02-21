@@ -216,7 +216,7 @@ def solve_vrp_group(
             f"sym_load_{idx}"
         )
 
-    # Valid inequalities: weight-based cover cuts
+    # Valid inequalities: weight-based and stop-based cover cuts
     # For subsets of orders exceeding truck capacity, at most |S|-1 can be on same truck
     for k in K:
         # Generate cover inequalities for pairs/triples that exceed capacity
@@ -232,6 +232,18 @@ def solve_vrp_group(
                     if weights[stops[i]] + weights[stops[j]] + weights[stops[l]] > TL_MAX_LBS:
                         m.addConstr(y[stops[i], k] + y[stops[j], k] + y[stops[l], k] <= 2,
                                    f"weight_cover3_{stops[i]}_{stops[j]}_{stops[l]}_{k}")
+
+    # Stop-based cover cuts: if more than MAX_STOPS orders, not all can be on same truck
+    for k in K:
+        # For groups of MAX_STOPS+1 orders, at most MAX_STOPS can be assigned to truck k
+        if len(stops) > MAX_STOPS:
+            # Add cuts for all combinations of MAX_STOPS+1 orders
+            from itertools import combinations
+            for order_set in combinations(stops, MAX_STOPS + 1):
+                m.addConstr(
+                    gp.quicksum(y[i, k] for i in order_set) <= MAX_STOPS,
+                    f"stop_cover_{k}_{'_'.join(map(str, order_set))}"
+                )
 
     # ---- Solve ----------------------------------------------------
     m.optimize()
