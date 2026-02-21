@@ -10,11 +10,10 @@ Defaults to  data/sample_orders.csv  with KMeans clustering (4 clusters).
 
 from __future__ import annotations
 
+
 import sys
 import pandas as pd
-
 from src.gurobi_model import GUROBI_AVAILABLE
-from src.optimizer import run_optimization
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +79,7 @@ def _print_truck_detail(trucks: list[dict]) -> None:
 
     for truck in trucks:
         solver_info = truck.get("solve_info", "")
-        solver_tag  = f"{truck.get('solver', 'Heuristic')}  [{solver_info}]"
+        solver_tag = f"{truck.get('solver', 'Heuristic')}  [{solver_info}]"
         print(f"\n  Truck ID      : {truck['truck_id']}")
         print(f"  Shipment Type : {truck['shipment_type']}")
         print(f"  Solver        : {solver_tag}")
@@ -90,8 +89,10 @@ def _print_truck_detail(trucks: list[dict]) -> None:
         print(f"  Est. Distance : {truck['total_distance_miles']:,.1f} miles")
         print(f"  Stops         : {truck['n_stops']}")
         print()
-        print(f"  {'Stop':<6} {'Drop City':<20} {'Sales Doc':<14} {'PO Number':<16} "
-              f"{'Material':<14} {'Weight (lb)':>11}")
+        print(
+            f"  {'Stop':<6} {'Drop City':<20} {'Sales Doc':<14} {'PO Number':<16} "
+            f"{'Material':<14} {'Weight (lb)':>11}"
+        )
         print("  " + "-" * 84)
         for i, stop in enumerate(truck["route"], start=1):
             print(
@@ -106,17 +107,14 @@ def _print_truck_detail(trucks: list[dict]) -> None:
 # Main
 # ---------------------------------------------------------------------------
 def main() -> None:
-    data_file = sys.argv[1] if len(sys.argv) > 1 else "data/sample_orders.csv"
-    cluster_method = sys.argv[2] if len(sys.argv) > 2 else "kmeans"
 
-    solver_label = "Gurobi MIP (MTZ-VRP)" if GUROBI_AVAILABLE else "Heuristic (nearest-neighbour)"
-
-    print(_LINE)
-    print("  FREIGHT ROUTE OPTIMIZATION")
-    print(_LINE)
-    print(f"\n  Input file     : {data_file}")
-    print(f"  Cluster method : {cluster_method}")
-    print(f"  Routing solver : {solver_label}\n")
+    data_file = (
+        sys.argv[1] if len(sys.argv) > 1 else "data/sample_orders_kmeans_preproc.csv"
+    )
+    solver_label = (
+        "Gurobi MIP (MTZ-VRP)" if GUROBI_AVAILABLE else "Heuristic (nearest-neighbour)"
+    )
+    print(f"  Routing solver         : {solver_label}\n")
 
     try:
         df = pd.read_csv(data_file)
@@ -124,13 +122,59 @@ def main() -> None:
         print(f"ERROR: File not found: {data_file}")
         sys.exit(1)
 
-    print(f"  Loaded {len(df)} orders.\n")
-    print("  Running pipeline...")
+    print(f"  Loaded {len(df)} orders (preprocessed).\n")
 
-    trucks, groups, df_geo = run_optimization(df, cluster_method=cluster_method)
+    if not GUROBI_AVAILABLE:
+        print("ERROR: Gurobi is not available. Cannot run MIP optimization.")
+        sys.exit(1)
 
-    _print_summary(trucks, groups, df_geo)
-    _print_truck_detail(trucks)
+    print("  Running MIP optimization (Gurobi)...")
+    from src.gurobi_model import solve_vrp_group
+    from src.consolidation import ConsolidationGroup
+
+    # Reconstruct groups from the preprocessed CSV
+    group_cols = [
+        "group_id",
+        "cluster",
+        "window_start",
+        "window_end",
+        "total_weight_lbs",
+        "shipment_type",
+    ]
+    groups = []
+    for group_id, group_df in df.groupby("group_id"):
+        group_info = group_df.iloc[0]
+        orders = group_df.to_dict("records")
+        group = ConsolidationGroup(
+            group_id=group_info["group_id"],
+            cluster=int(group_info["cluster"]),
+            window_start=group_info["window_start"],
+            window_end=group_info["window_end"],
+            orders=orders,
+            total_weight_lbs=float(group_info["total_weight_lbs"]),
+            shipment_type=group_info["shipment_type"],
+        )
+        groups.append(group)
+
+    all_trucks = []
+    for group in groups:
+        if not group.orders:
+            continue
+        pickup_lat = group.orders[0]["pickup_lat"]
+        pickup_lng = group.orders[0]["pickup_lng"]
+        trucks = solve_vrp_group(group, pickup_lat, pickup_lng)
+        if trucks is None:
+            print(f"    [Group {group.group_id}] Gurobi failed or infeasible.")
+            continue
+        for truck in trucks:
+            truck["group_id"] = group.group_id
+            truck["cluster"] = group.cluster
+            truck["window_start"] = group.window_start
+            truck["window_end"] = group.window_end
+        all_trucks.extend(trucks)
+
+    _print_summary(all_trucks, groups, df)
+    _print_truck_detail(all_trucks)
 
     print(f"\n{_LINE}")
     print("  Done.")
