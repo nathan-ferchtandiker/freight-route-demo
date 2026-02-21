@@ -197,6 +197,11 @@ def solve_vrp_group(
                         f"mtz_{i}_{j}_{k}",
                     )
 
+    # Logical constraints: order can only be assigned to active truck
+    for i in stops:
+        for k in K:
+            m.addConstr(y[i, k] <= z[k], f"logic_{i}_{k}")
+
     # C10: symmetry breaking — use lower-indexed trucks first
     for idx in range(len(K) - 1):
         m.addConstr(z[K[idx]] >= z[K[idx + 1]], f"sym_{idx}")
