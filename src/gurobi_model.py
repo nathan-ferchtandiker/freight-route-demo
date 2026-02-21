@@ -156,6 +156,9 @@ def solve_vrp_group(
     for i in stops:
         m.addConstr(gp.quicksum(y[i, k] for k in K) == 1, f"serve_{i}")
 
+    # Symmetry breaking: assign first order to first truck
+    m.addConstr(y[1, 1] == 1, "sym_break_first_order")
+
     for k in K:
         # C2: truck departs depot iff activated
         m.addConstr(gp.quicksum(x[0, j, k] for j in stops) == z[k], f"dep_out_{k}")
