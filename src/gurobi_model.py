@@ -145,9 +145,9 @@ def solve_vrp_group(
     )
 
     # Set branching priorities: structural decisions first
-    # Truck activation (highest priority)
+    # Truck activation (highest priority, graduated by symmetry breaking order)
     for k in K:
-        z[k].BranchPriority = 10
+        z[k].BranchPriority = 15 - k  # z[1]=14, z[2]=13, z[3]=12, etc.
     
     # Order assignments (medium priority)  
     for i in stops:
