@@ -199,8 +199,6 @@ def solve_vrp_group(
 
     # Logical constraints: order can only be assigned to active truck
     # Gurobi params (auto-tuned by GurobiAgent)
-    m.setParam("MIPFocus", 3)
-    # Gurobi params (auto-tuned by GurobiAgent)
     m.setParam("Symmetry", 2)
     for i in stops:
         for k in K:
